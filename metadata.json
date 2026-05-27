@@ -1,0 +1,6 @@
+{
+  "name": "My Pass",
+  "description": "A trip planner app to save and view information about a trip in a single offline list.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

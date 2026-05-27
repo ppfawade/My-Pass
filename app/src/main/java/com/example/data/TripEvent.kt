@@ -5,16 +5,25 @@ import androidx.room.PrimaryKey
 
 enum class EventType {
     FLIGHT,
-    ACCOMMODATION,
+    RAIL,
+    BUS,
+    TAXI,
+    HOTEL,
+    HOSTEL,
+    APARTMENT,
     PDF,
+    TICKET,
+    RESERVATION,
     NOTES,
     LINK,
-    PHOTO
+    PHOTO,
+    GALLERY
 }
 
 enum class EventStatus {
     IN_PROGRESS,
-    UPCOMING
+    UPCOMING,
+    PAST
 }
 
 @Entity(tableName = "trip_events")

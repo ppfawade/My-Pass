@@ -52,7 +52,7 @@ class TripRepository(private val eventDao: TripEventDao, private val tripDao: Tr
                         title = "Check-in at Hotel",
                         subtitle = "Hôtel des Arts Montmartre",
                         description = "5 Rue Tholozé, 75018 Paris, France",
-                        type = EventType.ACCOMMODATION,
+                        type = EventType.HOTEL,
                         status = EventStatus.UPCOMING,
                         timeLabel = "Today • 3:00 PM",
                         imageResIdName = "hotel_image"

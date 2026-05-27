@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -190,7 +191,7 @@ fun TimelineItem(event: TripEvent, isLast: Boolean, isFirst: Boolean = false, on
                     }
 
                     // Side Image if applicable
-                    val isSideImage = setOf(EventType.FLIGHT, EventType.ACCOMMODATION, EventType.LINK).contains(event.type)
+                    val isSideImage = setOf(EventType.FLIGHT, EventType.RAIL, EventType.BUS, EventType.TAXI, EventType.HOTEL, EventType.HOSTEL, EventType.APARTMENT, EventType.LINK).contains(event.type)
                     if (isSideImage && !event.imageResIdName.isNullOrEmpty()) {
                         Spacer(modifier = Modifier.width(16.dp))
                         Box(
@@ -228,7 +229,7 @@ fun TimelineItem(event: TripEvent, isLast: Boolean, isFirst: Boolean = false, on
 
 @Composable
 fun EventSpecificTextContent(event: TripEvent) {
-    if (event.type == EventType.FLIGHT && event.status == EventStatus.IN_PROGRESS) {
+    if ((event.type == EventType.FLIGHT || event.type == EventType.RAIL || event.type == EventType.BUS || event.type == EventType.TAXI) && event.status == EventStatus.IN_PROGRESS) {
         Spacer(modifier = Modifier.height(8.dp))
         Box(
             modifier = Modifier
@@ -237,7 +238,7 @@ fun EventSpecificTextContent(event: TripEvent) {
                 .padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
              Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.FlightTakeoff, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color(0xFF10B981))
+                Icon(Icons.Default.DirectionsTransit, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color(0xFF10B981))
                 Spacer(modifier = Modifier.width(4.dp))
                 Text("In Progress", color = Color(0xFF10B981), fontSize = 12.sp, fontWeight = FontWeight.Bold)
              }
@@ -274,10 +275,18 @@ fun EventSpecificTextContent(event: TripEvent) {
 fun getIconForEventType(type: EventType): ImageVector {
     return when (type) {
         EventType.FLIGHT -> Icons.Default.Flight
-        EventType.ACCOMMODATION -> Icons.Default.Bed
-        EventType.PDF -> Icons.Default.Article
-        EventType.NOTES -> Icons.Default.Notes
+        EventType.RAIL -> Icons.Default.Train
+        EventType.BUS -> Icons.Default.DirectionsBus
+        EventType.TAXI -> Icons.Default.LocalTaxi
+        EventType.HOTEL -> Icons.Default.Bed
+        EventType.HOSTEL -> Icons.Default.LocalHotel
+        EventType.APARTMENT -> Icons.Default.Home
+        EventType.PDF -> Icons.AutoMirrored.Filled.Article
+        EventType.TICKET -> Icons.Default.ConfirmationNumber
+        EventType.RESERVATION -> Icons.Default.EventSeat
+        EventType.NOTES -> Icons.AutoMirrored.Filled.Notes
         EventType.LINK -> Icons.Default.Link
         EventType.PHOTO -> Icons.Default.Image
+        EventType.GALLERY -> Icons.Default.PhotoLibrary
     }
 }

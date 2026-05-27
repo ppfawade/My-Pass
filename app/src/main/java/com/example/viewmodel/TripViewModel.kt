@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -23,15 +24,32 @@ class TripViewModel(private val repository: TripRepository) : ViewModel() {
 
     val currentTripId = MutableStateFlow<Int?>(null)
     val selectedFilter = MutableStateFlow<EventStatus?>(null) // null for "All"
+    val searchQuery = MutableStateFlow("")
 
     @kotlinx.coroutines.ExperimentalCoroutinesApi
-    val events: StateFlow<List<TripEvent>> = kotlinx.coroutines.flow.combine(currentTripId, selectedFilter) { tripId, filter ->
-        Pair(tripId, filter)
-    }.flatMapLatest { (tripId, filter) ->
+    val events: StateFlow<List<TripEvent>> = kotlinx.coroutines.flow.combine(
+        currentTripId, 
+        selectedFilter,
+        searchQuery
+    ) { tripId, filter, query ->
+        Triple(tripId, filter, query)
+    }.flatMapLatest { (tripId, filter, query) ->
         if (tripId == null) {
             kotlinx.coroutines.flow.flowOf(emptyList())
         } else {
-            repository.getEventsForTrip(tripId, filter)
+            repository.getEventsForTrip(tripId, filter).map { list ->
+                if (query.isBlank()) {
+                    list
+                } else {
+                    val q = query.lowercase()
+                    list.filter { event ->
+                        event.title.lowercase().contains(q) ||
+                        event.subtitle?.lowercase()?.contains(q) == true ||
+                        event.description?.lowercase()?.contains(q) == true ||
+                        event.type.name.lowercase().contains(q)
+                    }
+                }
+            }
         }
     }
     .stateIn(
@@ -53,6 +71,10 @@ class TripViewModel(private val repository: TripRepository) : ViewModel() {
 
     fun setFilter(status: EventStatus?) {
         selectedFilter.value = status
+    }
+
+    fun updateSearchQuery(query: String) {
+        searchQuery.value = query
     }
 
     fun selectTrip(tripId: Int) {

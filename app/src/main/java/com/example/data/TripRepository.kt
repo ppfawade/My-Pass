@@ -4,28 +4,42 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class TripRepository(private val dao: TripEventDao) {
-    val allEvents: Flow<List<TripEvent>> = dao.getAllEvents()
+class TripRepository(private val eventDao: TripEventDao, private val tripDao: TripDao) {
+    val allTrips: Flow<List<Trip>> = tripDao.getAllTrips()
 
-    fun getEvents(status: EventStatus?): Flow<List<TripEvent>> {
+    fun getEventsForTrip(tripId: Int, status: EventStatus?): Flow<List<TripEvent>> {
         return if (status == null) {
-            allEvents
+            eventDao.getEventsForTrip(tripId)
         } else {
-            dao.getEventsByStatus(status)
+            eventDao.getEventsForTripByStatus(tripId, status)
+        }
+    }
+
+    suspend fun createTrip(name: String): Int {
+        return withContext(Dispatchers.IO) {
+            tripDao.insert(Trip(name = name)).toInt()
+        }
+    }
+
+    suspend fun saveEvent(event: TripEvent) {
+        withContext(Dispatchers.IO) {
+            eventDao.insertEvent(event)
         }
     }
 
     suspend fun deleteEvent(event: TripEvent) {
         withContext(Dispatchers.IO) {
-            dao.deleteEvent(event)
+            eventDao.deleteEvent(event)
         }
     }
 
     suspend fun preloadDataIfEmpty() {
         withContext(Dispatchers.IO) {
-            if (dao.getCount() == 0) {
+            if (tripDao.getCount() == 0) {
+                val demoTripId = tripDao.insert(Trip(name = "My Trip to Paris")).toInt()
                 val mockData = listOf(
                     TripEvent(
+                        tripId = demoTripId,
                         title = "Flight to Paris (AF 123)",
                         subtitle = "JFK 8:45 AM -> CDG 10:30 AM",
                         type = EventType.FLIGHT,
@@ -34,6 +48,7 @@ class TripRepository(private val dao: TripEventDao) {
                         imageResIdName = "flight_image"
                     ),
                     TripEvent(
+                        tripId = demoTripId,
                         title = "Check-in at Hotel",
                         subtitle = "Hôtel des Arts Montmartre",
                         description = "5 Rue Tholozé, 75018 Paris, France",
@@ -43,6 +58,7 @@ class TripRepository(private val dao: TripEventDao) {
                         imageResIdName = "hotel_image"
                     ),
                     TripEvent(
+                        tripId = demoTripId,
                         title = "Hotel Reservation",
                         subtitle = "Confirmation #HDAM78593",
                         type = EventType.PDF,
@@ -51,6 +67,7 @@ class TripRepository(private val dao: TripEventDao) {
                         pdfContent = "hotel-reservation.pdf\n212 KB"
                     ),
                     TripEvent(
+                        tripId = demoTripId,
                         title = "Notes",
                         description = "Check-in is from 3 PM.\nAsk for a room on a higher floor if possible.",
                         type = EventType.NOTES,
@@ -58,6 +75,7 @@ class TripRepository(private val dao: TripEventDao) {
                         timeLabel = "Today • 5:00 PM",
                     ),
                     TripEvent(
+                        tripId = demoTripId,
                         title = "Louvre Museum",
                         subtitle = "Official website",
                         type = EventType.LINK,
@@ -67,6 +85,7 @@ class TripRepository(private val dao: TripEventDao) {
                         imageResIdName = "louvre_image"
                     ),
                     TripEvent(
+                        tripId = demoTripId,
                         title = "Trouver un café sympa",
                         type = EventType.PHOTO,
                         status = EventStatus.UPCOMING,
@@ -74,7 +93,7 @@ class TripRepository(private val dao: TripEventDao) {
                         imageResIdName = "cafe_image"
                     )
                 )
-                dao.insertAll(mockData)
+                eventDao.insertAll(mockData)
             }
         }
     }

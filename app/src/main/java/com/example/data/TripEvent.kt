@@ -20,6 +20,7 @@ enum class EventStatus {
 @Entity(tableName = "trip_events")
 data class TripEvent(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val tripId: Int, // Associated trip
     val title: String,
     val subtitle: String? = null, // e.g. "JFK 8:45 AM -> CDG 10:30 AM" or "Hôtel des Arts Montmartre"
     val description: String? = null, // for multi-line notes or addresses

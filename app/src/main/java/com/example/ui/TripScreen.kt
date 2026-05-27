@@ -39,29 +39,174 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TripScreen(viewModel: TripViewModel) {
+fun TripScreen(viewModel: TripViewModel, onNavigateToSettings: () -> Unit, onNavigateToProfile: () -> Unit) {
     val events by viewModel.events.collectAsState()
     val filter by viewModel.selectedFilter.collectAsState()
+    val allTrips by viewModel.allTrips.collectAsState()
+    val currentTripId by viewModel.currentTripId.collectAsState()
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+
+    var showAboutDialog by remember { mutableStateOf(false) }
+    var selectedEvent by remember { mutableStateOf<TripEvent?>(null) }
+    var editingEvent by remember { mutableStateOf<TripEvent?>(null) }
+    var createEventDialog by remember { mutableStateOf(false) }
+
+    var showCreateTripDialog by remember { mutableStateOf(false) }
+
+    if (showCreateTripDialog) {
+        var newTripName by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showCreateTripDialog = false },
+            title = { Text("Create Trip") },
+            text = {
+                OutlinedTextField(
+                    value = newTripName,
+                    onValueChange = { newTripName = it },
+                    label = { Text("Trip Name") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (newTripName.isNotBlank()) {
+                        viewModel.createTrip(newTripName)
+                    }
+                    showCreateTripDialog = false
+                }) {
+                    Text("Create")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCreateTripDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showAboutDialog) {
+        AboutDialog(onDismiss = { showAboutDialog = false })
+    }
+
+    selectedEvent?.let { event ->
+        EventDetailsDialog(
+            event = event,
+            onDismiss = { selectedEvent = null },
+            onEdit = {
+                editingEvent = event
+                selectedEvent = null
+            }
+        )
+    }
+
+    editingEvent?.let { event ->
+        var editTitle by remember { mutableStateOf(event.title) }
+        var editSubtitle by remember { mutableStateOf(event.subtitle ?: "") }
+        var editDescription by remember { mutableStateOf(event.description ?: "") }
+        
+        AlertDialog(
+            onDismissRequest = { editingEvent = null },
+            title = { Text("Edit Event") },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(value = editTitle, onValueChange = { editTitle = it }, label = { Text("Title") }, modifier = Modifier.fillMaxWidth())
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(value = editSubtitle, onValueChange = { editSubtitle = it }, label = { Text("Subtitle") }, modifier = Modifier.fillMaxWidth())
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(value = editDescription, onValueChange = { editDescription = it }, label = { Text("Description") }, modifier = Modifier.fillMaxWidth())
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    viewModel.saveEvent(event.copy(title = editTitle, subtitle = editSubtitle.ifBlank { null }, description = editDescription.ifBlank { null }))
+                    editingEvent = null
+                }) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingEvent = null }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (createEventDialog && currentTripId != null) {
+        var createTitle by remember { mutableStateOf("") }
+        var createSubtitle by remember { mutableStateOf("") }
+        var createType by remember { mutableStateOf(EventType.NOTES) }
+        var createDescription by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { createEventDialog = false },
+            title = { Text("Add Card") },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(value = createTitle, onValueChange = { createTitle = it }, label = { Text("Title") }, modifier = Modifier.fillMaxWidth())
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(value = createSubtitle, onValueChange = { createSubtitle = it }, label = { Text("Subtitle") }, modifier = Modifier.fillMaxWidth())
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(value = createDescription, onValueChange = { createDescription = it }, label = { Text("Description") }, modifier = Modifier.fillMaxWidth())
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (createTitle.isNotBlank()) {
+                        viewModel.saveEvent(
+                            TripEvent(
+                                tripId = currentTripId!!,
+                                title = createTitle,
+                                subtitle = createSubtitle.ifBlank { null },
+                                description = createDescription.ifBlank { null },
+                                type = createType,
+                                status = EventStatus.UPCOMING,
+                                timeLabel = "New Event"
+                            )
+                        )
+                        createEventDialog = false
+                    }
+                }) {
+                    Text("Add")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { createEventDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
                 Spacer(Modifier.height(12.dp))
-                Text("My Pass Menu", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
+                // User requested: "It should just say 'My Pass' with stylized text."
+                Text("My Pass", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.ExtraBold, fontSize = 24.sp, color = MaterialTheme.colorScheme.primary)
                 HorizontalDivider()
+                NavigationDrawerItem(
+                    label = { Text("Profile") },
+                    selected = false,
+                    onClick = { 
+                        coroutineScope.launch { drawerState.close() }
+                        onNavigateToProfile()
+                    }
+                )
                 NavigationDrawerItem(
                     label = { Text("Settings") },
                     selected = false,
-                    onClick = { /*TODO*/ }
+                    onClick = { 
+                        coroutineScope.launch { drawerState.close() }
+                        onNavigateToSettings() 
+                    }
                 )
                 NavigationDrawerItem(
                     label = { Text("About") },
                     selected = false,
-                    onClick = { /*TODO*/ }
+                    onClick = { 
+                        coroutineScope.launch { drawerState.close() }
+                        showAboutDialog = true 
+                    }
                 )
             }
         }
@@ -78,24 +223,29 @@ fun TripScreen(viewModel: TripViewModel) {
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.clickable { expanded = true }
                         ) {
-                            Text("My Trip to Paris", fontWeight = FontWeight.Bold)
+                            val currentTripName = allTrips.find { it.id == currentTripId }?.name ?: ""
+                            Text(currentTripName, fontWeight = FontWeight.Bold)
                             Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Dropdown")
                         }
                         DropdownMenu(
                             expanded = expanded,
                             onDismissRequest = { expanded = false }
                         ) {
+                            allTrips.forEach { trip ->
+                                DropdownMenuItem(
+                                    text = { Text(trip.name) },
+                                    onClick = { 
+                                        viewModel.selectTrip(trip.id)
+                                        expanded = false 
+                                    }
+                                )
+                            }
+                            HorizontalDivider()
                             DropdownMenuItem(
-                                text = { Text("My Trip to Paris") },
-                                onClick = { expanded = false }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Create Trip") },
+                                text = { Text("Create Trip", color = MaterialTheme.colorScheme.primary) },
                                 onClick = {
                                     expanded = false
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Create Trip clicked")
-                                    }
+                                    showCreateTripDialog = true
                                 }
                             )
                         }
@@ -110,41 +260,26 @@ fun TripScreen(viewModel: TripViewModel) {
                         Icon(Icons.Default.Menu, contentDescription = "Menu")
                     }
                 },
-                actions = {
-                    IconButton(onClick = {
-                        coroutineScope.launch {
-                            snackbarHostState.showSnackbar("Search functionality coming soon")
-                        }
-                    }) {
-                        Icon(Icons.Default.Search, contentDescription = "Search")
-                    }
-                    IconButton(onClick = {
-                        coroutineScope.launch {
-                            snackbarHostState.showSnackbar("Options menu clicked")
-                        }
-                    }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "More")
-                    }
-                },
+                actions = {},
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
             )
         },
-        bottomBar = {
-            CustomBottomNavigation(snackbarHostState, coroutineScope)
-        },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { /*TODO*/ },
+                onClick = { 
+                    if (currentTripId != null) {
+                        createEventDialog = true
+                    } else {
+                        coroutineScope.launch { snackbarHostState.showSnackbar("Create a trip first") }
+                    }
+                },
                 containerColor = MaterialTheme.colorScheme.primary,
-                shape = CircleShape,
-                modifier = Modifier.offset(y = 48.dp) // Offset to overlap bottom bar
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Trip", tint = MaterialTheme.colorScheme.onPrimary)
+                Icon(Icons.Default.Add, contentDescription = "Add Card", tint = MaterialTheme.colorScheme.onPrimary)
             }
-        },
-        floatingActionButtonPosition = FabPosition.Center
+        }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
             FilterChipsRow(
@@ -169,7 +304,8 @@ fun TripScreen(viewModel: TripViewModel) {
                             event = event,
                             isLast = isLast,
                             isFirst = index == 0,
-                            onDelete = { viewModel.deleteEvent(event) }
+                            onDelete = { viewModel.deleteEvent(event) },
+                            onClick = { selectedEvent = event }
                         )
                     }
                 }
@@ -185,7 +321,8 @@ fun TripScreen(viewModel: TripViewModel) {
                             event = event,
                             isLast = isLast,
                             isFirst = inProgressEvents.isEmpty() && index == 0,
-                            onDelete = { viewModel.deleteEvent(event) }
+                            onDelete = { viewModel.deleteEvent(event) },
+                            onClick = { selectedEvent = event }
                         )
                     }
                 }
@@ -241,43 +378,6 @@ fun FilterTab(text: String, isSelected: Boolean, onClick: () -> Unit, modifier: 
             text = text,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
             color = if (isSelected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-fun CustomBottomNavigation(snackbarHostState: SnackbarHostState, coroutineScope: kotlinx.coroutines.CoroutineScope) {
-    var selectedItem by remember { mutableIntStateOf(1) }
-    NavigationBar(
-        containerColor = MaterialTheme.colorScheme.background,
-        tonalElevation = 8.dp
-    ) {
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-            label = { Text("Home") },
-            selected = selectedItem == 0,
-            onClick = { 
-                selectedItem = 0
-                coroutineScope.launch { snackbarHostState.showSnackbar("Home") }
-            }
-        )
-        // Add empty space for FAB
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Luggage, contentDescription = "My Trips", tint = Color.Transparent) },
-            label = { Text("My Trips", color = MaterialTheme.colorScheme.primary) },
-            selected = selectedItem == 1,
-            onClick = { 
-                selectedItem = 1 
-            }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
-            label = { Text("Profile") },
-            selected = selectedItem == 2,
-            onClick = { 
-                selectedItem = 2 
-                coroutineScope.launch { snackbarHostState.showSnackbar("Profile") }
-            }
         )
     }
 }

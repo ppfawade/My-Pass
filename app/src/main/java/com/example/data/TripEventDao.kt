@@ -8,11 +8,14 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TripEventDao {
-    @Query("SELECT * FROM trip_events")
-    fun getAllEvents(): Flow<List<TripEvent>>
+    @Query("SELECT * FROM trip_events WHERE tripId = :tripId")
+    fun getEventsForTrip(tripId: Int): Flow<List<TripEvent>>
     
-    @Query("SELECT * FROM trip_events WHERE status = :status")
-    fun getEventsByStatus(status: EventStatus): Flow<List<TripEvent>>
+    @Query("SELECT * FROM trip_events WHERE tripId = :tripId AND status = :status")
+    fun getEventsForTripByStatus(tripId: Int, status: EventStatus): Flow<List<TripEvent>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertEvent(event: TripEvent)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(events: List<TripEvent>)

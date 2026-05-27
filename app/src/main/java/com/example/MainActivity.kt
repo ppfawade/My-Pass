@@ -18,6 +18,12 @@ import com.example.ui.TripScreen
 import com.example.ui.theme.MyPassTheme
 import com.example.viewmodel.TripViewModelFactory
 
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import com.example.ui.SettingsScreen
+import com.example.ui.ProfileScreen
+
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -26,8 +32,8 @@ class MainActivity : ComponentActivity() {
     val db = Room.databaseBuilder(
         applicationContext,
         AppDatabase::class.java, "trip_database"
-    ).build()
-    val repository = TripRepository(db.tripEventDao())
+    ).fallbackToDestructiveMigration().build()
+    val repository = TripRepository(db.tripEventDao(), db.tripDao())
     val factory = TripViewModelFactory(repository)
 
     setContent {
@@ -37,7 +43,23 @@ class MainActivity : ComponentActivity() {
             color = MaterialTheme.colorScheme.background
         ) {
             val viewModel: com.example.viewmodel.TripViewModel = viewModel(factory = factory)
-            TripScreen(viewModel = viewModel)
+            val navController = rememberNavController()
+
+            NavHost(navController = navController, startDestination = "trip") {
+                composable("trip") {
+                    TripScreen(
+                        viewModel = viewModel,
+                        onNavigateToSettings = { navController.navigate("settings") },
+                        onNavigateToProfile = { navController.navigate("profile") }
+                    )
+                }
+                composable("settings") {
+                    SettingsScreen(onBack = { navController.popBackStack() })
+                }
+                composable("profile") {
+                    ProfileScreen(onBack = { navController.popBackStack() })
+                }
+            }
         }
       }
     }

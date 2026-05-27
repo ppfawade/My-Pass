@@ -15,26 +15,61 @@ import kotlinx.coroutines.launch
 
 class TripViewModel(private val repository: TripRepository) : ViewModel() {
 
+    val allTrips = repository.allTrips.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    val currentTripId = MutableStateFlow<Int?>(null)
     val selectedFilter = MutableStateFlow<EventStatus?>(null) // null for "All"
 
-    val events: StateFlow<List<TripEvent>> = selectedFilter
-        .flatMapLatest { filter ->
-            repository.getEvents(filter)
+    @kotlinx.coroutines.ExperimentalCoroutinesApi
+    val events: StateFlow<List<TripEvent>> = kotlinx.coroutines.flow.combine(currentTripId, selectedFilter) { tripId, filter ->
+        Pair(tripId, filter)
+    }.flatMapLatest { (tripId, filter) ->
+        if (tripId == null) {
+            kotlinx.coroutines.flow.flowOf(emptyList())
+        } else {
+            repository.getEventsForTrip(tripId, filter)
         }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+    }
+    .stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     init {
         viewModelScope.launch {
             repository.preloadDataIfEmpty()
+            allTrips.collect { trips ->
+                if (trips.isNotEmpty() && currentTripId.value == null) {
+                    currentTripId.value = trips.first().id
+                }
+            }
         }
     }
 
     fun setFilter(status: EventStatus?) {
         selectedFilter.value = status
+    }
+
+    fun selectTrip(tripId: Int) {
+        currentTripId.value = tripId
+    }
+
+    fun createTrip(name: String) {
+        viewModelScope.launch {
+            val newId = repository.createTrip(name)
+            currentTripId.value = newId
+        }
+    }
+
+    fun saveEvent(event: TripEvent) {
+        viewModelScope.launch {
+            repository.saveEvent(event)
+        }
     }
 
     fun deleteEvent(event: TripEvent) {

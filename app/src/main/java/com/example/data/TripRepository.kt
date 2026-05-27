@@ -15,6 +15,12 @@ class TripRepository(private val dao: TripEventDao) {
         }
     }
 
+    suspend fun deleteEvent(event: TripEvent) {
+        withContext(Dispatchers.IO) {
+            dao.deleteEvent(event)
+        }
+    }
+
     suspend fun preloadDataIfEmpty() {
         withContext(Dispatchers.IO) {
             if (dao.getCount() == 0) {

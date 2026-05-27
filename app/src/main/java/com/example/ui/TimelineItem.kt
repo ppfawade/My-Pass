@@ -2,6 +2,7 @@ package com.example.ui
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -45,8 +46,9 @@ fun StatusHeader(statusText: String, dotColor: Color) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TimelineItem(event: TripEvent, isLast: Boolean, isFirst: Boolean = false) {
+fun TimelineItem(event: TripEvent, isLast: Boolean, isFirst: Boolean = false, onDelete: () -> Unit = {}) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -100,17 +102,61 @@ fun TimelineItem(event: TripEvent, isLast: Boolean, isFirst: Boolean = false) {
         }
 
         // Content Card
-        Card(
-            modifier = Modifier
-                .weight(1f)
-                .padding(vertical = 8.dp, horizontal = 8.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        val dismissState = rememberSwipeToDismissBoxState(
+            confirmValueChange = { dismissValue ->
+                if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
+                    onDelete()
+                    true
+                } else {
+                    false
+                }
+            }
+        )
+
+        val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+        val context = androidx.compose.ui.platform.LocalContext.current
+
+        SwipeToDismissBox(
+            state = dismissState,
+            enableDismissFromStartToEnd = false,
+            enableDismissFromEndToStart = true,
+            modifier = Modifier.weight(1f),
+            backgroundContent = {
+                val color = MaterialTheme.colorScheme.error
+                Box(
+                    Modifier.fillMaxSize()
+                        .padding(vertical = 8.dp, horizontal = 8.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(color)
+                        .padding(horizontal = 20.dp),
+                    contentAlignment = Alignment.CenterEnd
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.onError)
+                }
+            }
         ) {
-            Column(
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp, horizontal = 8.dp)
+                    .clickable {
+                        if (!event.url.isNullOrEmpty()) {
+                            uriHandler.openUri(event.url)
+                        } else if (event.type == EventType.ACCOMMODATION) {
+                            val uri = "geo:0,0?q=Paris"
+                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(uri))
+                            context.startActivity(intent)
+                        } else {
+                            android.widget.Toast.makeText(context, "Opening ${event.title}...", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
@@ -185,6 +231,7 @@ fun TimelineItem(event: TripEvent, isLast: Boolean, isFirst: Boolean = false) {
                     }
                 }
             }
+        }
         }
     }
 }

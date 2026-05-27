@@ -20,6 +20,9 @@ interface TripEventDao {
     @Query("SELECT COUNT(*) FROM trip_events")
     suspend fun getCount(): Int
 
+    @androidx.room.Delete
+    suspend fun deleteEvent(event: TripEvent)
+
     @Query("DELETE FROM trip_events")
     suspend fun clearAll()
 }

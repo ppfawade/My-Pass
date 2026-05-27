@@ -51,10 +51,9 @@ jobs:
           retention-days: 30
 
       - name: Create GitHub Release
-        # Only create an official release when a tag is pushed (e.g. 'v1.0.0')
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: app/build/outputs/apk/debug/app-debug.apk
-          name: Release ${{ github.ref_name }}
+          name: Build ${{ github.run_number }}
+          tag_name: build-${{ github.run_number }}
           generate_release_notes: true

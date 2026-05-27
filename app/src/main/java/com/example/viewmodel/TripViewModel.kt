@@ -36,6 +36,12 @@ class TripViewModel(private val repository: TripRepository) : ViewModel() {
     fun setFilter(status: EventStatus?) {
         selectedFilter.value = status
     }
+
+    fun deleteEvent(event: TripEvent) {
+        viewModelScope.launch {
+            repository.deleteEvent(event)
+        }
+    }
 }
 
 class TripViewModelFactory(private val repository: TripRepository) : ViewModelProvider.Factory {
